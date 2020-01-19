@@ -3,6 +3,9 @@
     <dimen name="activity_vertical_margin">16dp</dimen>
 
     <dimen name="default_text_size">16sp</dimen>
+    <dimen name="font_size">25sp</dimen>
+
+    <color name="errorColor">#f00</color>
 
     <dimen name="small_margin">10dp</dimen>
 </resources>

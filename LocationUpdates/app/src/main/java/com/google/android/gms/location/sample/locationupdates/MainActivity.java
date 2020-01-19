@@ -25,6 +25,7 @@ import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.provider.Settings;
 import androidx.annotation.NonNull;
 import com.google.android.material.snackbar.Snackbar;
@@ -36,6 +37,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.os.SystemClock.*;
 
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
@@ -89,7 +91,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * The desired interval for location updates. Inexact. Updates may be more or less frequent.
      */
-    private static final long UPDATE_INTERVAL_IN_MILLISECONDS = 10000;
+    private static final long UPDATE_INTERVAL_IN_MILLISECONDS = 5000;
 
     /**
      * The fastest rate for active location updates. Exact. Updates will never be more frequent
@@ -140,12 +142,17 @@ public class MainActivity extends AppCompatActivity {
     private TextView mLastUpdateTimeTextView;
     private TextView mLatitudeTextView;
     private TextView mLongitudeTextView;
+    private TextView mStopTextView;
 
     // Labels.
     private String mLatitudeLabel;
     private String mLongitudeLabel;
     private String mLastUpdateTimeLabel;
+    private String mStopTextLabel;
 
+    // Delta
+    private double deltaLat;
+    private double deltaLong;
     /**
      * Tracks the status of the location updates request. Value changes when the user presses the
      * Start Updates and Stop Updates buttons.
@@ -155,7 +162,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Time when the location was updated represented as a String.
      */
-    private String mLastUpdateTime;
+    private String mRealCurrentTime;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -170,14 +177,16 @@ public class MainActivity extends AppCompatActivity {
         mLatitudeTextView = (TextView) findViewById(R.id.latitude_text);
         mLongitudeTextView = (TextView) findViewById(R.id.longitude_text);
         mLastUpdateTimeTextView = (TextView) findViewById(R.id.last_update_time_text);
+        mStopTextView = (TextView) findViewById(R.id.stop_text);
 
         // Set labels.
         mLatitudeLabel = getResources().getString(R.string.latitude_label);
         mLongitudeLabel = getResources().getString(R.string.longitude_label);
         mLastUpdateTimeLabel = getResources().getString(R.string.last_update_time_label);
+        mStopTextLabel = getResources().getString(R.string.stop_text_label);
 
-        mRequestingLocationUpdates = false;
-        mLastUpdateTime = "";
+                mRequestingLocationUpdates = false;
+        mRealCurrentTime = "";
 
         // Update values using data stored in the Bundle.
         updateValuesFromBundle(savedInstanceState);
@@ -216,7 +225,7 @@ public class MainActivity extends AppCompatActivity {
 
             // Update the value of mLastUpdateTime from the Bundle and update the UI.
             if (savedInstanceState.keySet().contains(KEY_LAST_UPDATED_TIME_STRING)) {
-                mLastUpdateTime = savedInstanceState.getString(KEY_LAST_UPDATED_TIME_STRING);
+                mRealCurrentTime = savedInstanceState.getString(KEY_LAST_UPDATED_TIME_STRING);
             }
             updateUI();
         }
@@ -259,13 +268,32 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onLocationResult(LocationResult locationResult) {
                 super.onLocationResult(locationResult);
-
+                Location mPrevLocation;
+                if (mCurrentLocation == null) {
+                    mPrevLocation = locationResult.getLastLocation();
+                } else {
+                    mPrevLocation = mCurrentLocation;
+                }
                 mCurrentLocation = locationResult.getLastLocation();
-                mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+                String delta = String.format("%f: %f", mCurrentLocation.getLongitude() - mPrevLocation.getLongitude(), mCurrentLocation.getLatitude() - mPrevLocation.getLatitude());
+                Log.i("Approx. Velocity", delta);
+                mRealCurrentTime = DateFormat.getTimeInstance().format(new Date());
                 updateLocationUI();
-            }
+                deltaLong = mCurrentLocation.getLongitude() - mPrevLocation.getLongitude();
+                deltaLat = mCurrentLocation.getLatitude() - mPrevLocation.getLatitude();
+                double stop_lat = 43.465197;
+                double stop_long = -80.522328;
+                double distance = Math.sqrt((stop_lat - mCurrentLocation.getLatitude()) * (stop_lat - mCurrentLocation.getLatitude())
+                        + (stop_long - mCurrentLocation.getLongitude()) * (stop_long - mCurrentLocation.getLongitude()));
+                Log.i("Distance", Double.toString(distance));
+                if (distance < 0.0002) {
+                    mStopTextView.setText("Watch out, danger zone.");
+                } else {
+                    mStopTextView.setText("Keep moving");
+                }
+
         };
-    }
+    };}
 
     /**
      * Uses a {@link com.google.android.gms.location.LocationSettingsRequest.Builder} to build
@@ -403,7 +431,7 @@ public class MainActivity extends AppCompatActivity {
             mLongitudeTextView.setText(String.format(Locale.ENGLISH, "%s: %f", mLongitudeLabel,
                     mCurrentLocation.getLongitude()));
             mLastUpdateTimeTextView.setText(String.format(Locale.ENGLISH, "%s: %s",
-                    mLastUpdateTimeLabel, mLastUpdateTime));
+                    mLastUpdateTimeLabel, mRealCurrentTime));
         }
     }
 
@@ -457,7 +485,7 @@ public class MainActivity extends AppCompatActivity {
     public void onSaveInstanceState(Bundle savedInstanceState) {
         savedInstanceState.putBoolean(KEY_REQUESTING_LOCATION_UPDATES, mRequestingLocationUpdates);
         savedInstanceState.putParcelable(KEY_LOCATION, mCurrentLocation);
-        savedInstanceState.putString(KEY_LAST_UPDATED_TIME_STRING, mLastUpdateTime);
+        savedInstanceState.putString(KEY_LAST_UPDATED_TIME_STRING, mRealCurrentTime);
         super.onSaveInstanceState(savedInstanceState);
     }
 

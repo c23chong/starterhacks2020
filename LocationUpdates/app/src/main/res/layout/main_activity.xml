@@ -104,6 +104,16 @@
             android:textSize="@dimen/default_text_size" />
 
         <TextView
+            android:id="@+id/stop_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="@dimen/small_margin"
+            android:layout_marginStart="@dimen/small_margin"
+            android:textSize="@dimen/font_size"
+            android:textColor="@color/errorColor"
+            android:textStyle="bold"/>
+
+        <TextView
             android:id="@+id/location_inadequate_warning"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
